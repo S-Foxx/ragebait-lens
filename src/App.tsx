@@ -1,7 +1,17 @@
 import { useMemo, useState } from "react";
 import { classifyFeed } from "./classify";
 import type { Provider } from "./classify";
-import { fetchTrending, mockFeed } from "./youtube";
+import {
+  fetchTrending,
+  fetchByChannel,
+  fetchPlaylist,
+  fetchVideosByIds,
+  fetchSubscriptions,
+  parsePlaylistInput,
+  parseVideoIds,
+  mockFeed,
+} from "./youtube";
+import { getGoogleToken } from "./googleAuth";
 import { buildReport } from "./report";
 import type { CategoryId, VideoItem } from "./taxonomy";
 import { CATEGORIES } from "./taxonomy";
@@ -10,6 +20,7 @@ import { ReportPanel } from "./components/ReportPanel";
 import { SetupPanel } from "./components/SetupPanel";
 import type { SetupState } from "./components/SetupPanel";
 import { Logo } from "./components/Logo";
+import { About } from "./components/About";
 
 export default function App() {
   const [setup, setSetup] = useState<SetupState>({
@@ -19,13 +30,18 @@ export default function App() {
     ytKey: "",
     region: "US",
     count: 24,
-    useMock: true,
+    source: "sample",
+    channelInput: "",
+    playlistInput: "",
+    googleClientId: "",
+    googleSignedIn: false,
   });
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [running, setRunning] = useState(false);
   const [done, setDone] = useState(0);
   const [filter, setFilter] = useState<CategoryId | null>(null);
   const [fatal, setFatal] = useState<string | null>(null);
+  const [view, setView] = useState<"lens" | "about">("lens");
 
   const report = useMemo(() => buildReport(videos), [videos]);
   // Show results/report once we have a feed AND at least one attempt resolved
@@ -42,9 +58,7 @@ export default function App() {
     // stale results next to the new error banner
     setVideos([]);
     try {
-      const feed = setup.useMock
-        ? mockFeed(setup.count)
-        : await fetchTrending(setup.ytKey, setup.region, setup.count);
+      const feed = await fetchFeed(setup);
       if (!feed.length) throw new Error("No videos returned from the source.");
       setVideos(feed.map((v) => ({ ...v })));
 
@@ -83,15 +97,28 @@ export default function App() {
               <div className="text-[10px] uppercase tracking-widest text-muted">see the hook before you click</div>
             </div>
           </div>
-          {running && (
-            <div className="flex items-center gap-2 text-xs text-muted">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-conflict" />
-              analyzing {done}/{videos.length}
-            </div>
-          )}
+          <div className="flex items-center gap-4">
+            {running && (
+              <div className="flex items-center gap-2 text-xs text-muted">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-conflict" />
+                analyzing {done}/{videos.length}
+              </div>
+            )}
+            <button
+              onClick={() => setView(view === "about" ? "lens" : "about")}
+              className={`text-xs font-medium transition ${
+                view === "about" ? "text-zinc-100" : "text-muted hover:text-zinc-200"
+              }`}
+            >
+              {view === "about" ? "The lens" : "About"}
+            </button>
+          </div>
         </div>
       </header>
 
+      {view === "about" && <About onBack={() => setView("lens")} />}
+
+      {view === "lens" && (
       <main className="mx-auto max-w-[1400px] px-4 py-6">
         {/* intro */}
         {!hasResults && !running && (
@@ -154,9 +181,18 @@ export default function App() {
           </section>
         </div>
       </main>
+      )}
 
       <footer className="border-t border-edge px-4 py-6 text-center text-[11px] text-muted">
         <p>Reads title text only · no video is watched · your keys stay in your browser.</p>
+        <p className="mt-2">
+          <button
+            onClick={() => setView("about")}
+            className="font-medium text-zinc-300 underline decoration-edge underline-offset-2 transition-colors hover:text-zinc-100"
+          >
+            About this project &amp; your privacy
+          </button>
+        </p>
         <p className="mt-2">
           <a
             href="https://github.com/S-Foxx/ragebait-lens"
@@ -173,6 +209,33 @@ export default function App() {
       </footer>
     </div>
   );
+}
+
+// Dispatch the feed fetch based on the selected source mode. Keeping this out
+// of run() keeps the component lean and makes each mode's contract explicit.
+async function fetchFeed(s: SetupState): Promise<VideoItem[]> {
+  switch (s.source) {
+    case "sample":
+      return mockFeed(s.count);
+    case "trending":
+      return fetchTrending(s.ytKey, s.region, s.count);
+    case "channel":
+      return fetchByChannel(s.ytKey, s.channelInput, s.count);
+    case "playlist": {
+      // A playlist URL/ID takes precedence; otherwise treat the box as pasted links.
+      const playlistId = parsePlaylistInput(s.playlistInput);
+      if (playlistId) return fetchPlaylist(s.ytKey, playlistId, s.count);
+      const ids = parseVideoIds(s.playlistInput);
+      return fetchVideosByIds(s.ytKey, ids, s.count);
+    }
+    case "subscriptions": {
+      const token = getGoogleToken();
+      if (!token) throw new Error("Connect with Google first to read your subscriptions.");
+      return fetchSubscriptions(token, s.ytKey || undefined, s.count);
+    }
+    default:
+      return mockFeed(s.count);
+  }
 }
 
 function EmptyState() {

@@ -132,7 +132,7 @@ async function callAnthropic(key: string, model: string, title: string, channel:
 
 export const DEFAULT_MODELS: Record<Provider, string> = {
   openai: "gpt-4o-mini",
-  anthropic: "claude-3-5-haiku-latest",
+  anthropic: "claude-haiku-4-5-20251001",
 };
 
 export async function classifyOne(

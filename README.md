@@ -43,6 +43,23 @@ It's the punchline. Watching it sit at 2–4% while Conflict + Wealth + FOMO dom
 whole point: the algorithm doesn't reward honesty, it rewards the hook. Honest videos stay
 invisible unless someone explicitly searches for them.
 
+## Feed sources
+
+The whole point is to read **your** feed, not a generic one. Pick a source in the setup panel:
+
+| Source              | What it reads                                                        | Needs                          |
+| ------------------- | ------------------------------------------------------------------- | ------------------------------ |
+| **Sample**          | Built-in example titles. Great for a first look.                    | AI key only                    |
+| **Trending**        | Today's `mostPopular` videos for a region.                          | AI key + YouTube key           |
+| **By channel**      | Recent uploads from a channel handle/URL you actually watch.        | AI key + YouTube key           |
+| **Playlist / URLs** | A public playlist URL, or video links pasted from your homepage.    | AI key + YouTube key           |
+| **My subscriptions**| Newest uploads from channels you subscribe to (read-only sign-in).  | AI key + Google OAuth (no key) |
+
+> YouTube's API can't return your personal recommendation feed directly. The closest
+> organic reads are **By channel**, **Playlist / URLs** (paste links straight from your
+> homepage), and **My subscriptions**. All of them read **title text only** — no login to
+> this site, no screenshots, no OCR.
+
 ## Run locally
 
 ```bash
@@ -50,13 +67,36 @@ npm install
 npm run dev
 ```
 
-Open the local URL. Pick a provider, paste your OpenAI (`sk-...`) or Anthropic
-(`sk-ant-...`) key, and click **Analyze the feed**. Start with the built-in **Sample feed**
-(no YouTube key needed) to see how it works.
+Open the local URL (default `http://localhost:5174`). Pick a provider, paste your OpenAI
+(`sk-...`) or Anthropic (`sk-ant-...`) key, and click **Analyze the feed**. Start with the
+built-in **Sample** source (no YouTube key needed) to see how it works.
 
-For **Live YouTube**, get a free [YouTube Data API v3 key](https://console.cloud.google.com/apis/library/youtube.googleapis.com)
-and paste it in. It fetches `mostPopular` videos by region — title text only, no login,
-no screenshots, no OCR.
+### YouTube Data API key (Trending / By channel / Playlist)
+
+Get a free [YouTube Data API v3 key](https://console.cloud.google.com/apis/library/youtube.googleapis.com):
+
+1. In [Google Cloud Console](https://console.cloud.google.com/), create a project (a free
+   personal Google account works best — Workspace accounts often block API keys).
+2. Enable **YouTube Data API v3** for that project.
+3. **Credentials → Create credentials → API key**, then paste it (`AIza...`).
+4. **Restrict it:** Application restrictions → HTTP referrers (add your site and
+   `localhost/*`), and API restrictions → YouTube Data API v3 only. This protects your
+   free daily quota if the key ever leaks.
+
+### Google sign-in (My subscriptions)
+
+Reading your subscriptions needs a read-only OAuth grant instead of an API key. One-time setup:
+
+1. Use the same Google Cloud project where YouTube Data API v3 is enabled.
+2. **OAuth consent screen** → External → fill the basics → add your own Google address
+   under **Test users** (so you can sign in while the app is unpublished).
+3. **Credentials → Create credentials → OAuth client ID → Web application.** Under
+   **Authorized JavaScript origins** add your site's address and
+   `http://localhost:5174`. Copy the **Client ID** (only the ID — never a client secret).
+4. In the app, choose **My subscriptions**, paste the Client ID, and click **Connect with
+   Google**. The scope requested is `youtube.readonly`. The access token lives in memory
+   for that tab only, is never stored, and you can revoke it anytime at
+   [myaccount.google.com/permissions](https://myaccount.google.com/permissions).
 
 ## Deploy
 
@@ -73,6 +113,10 @@ output = `dist`. A `vercel.json` is included.
   scoped/limited key.
 - The YouTube key is sent to Google's API from the browser; restrict it to the YouTube
   Data API and (ideally) your domain in the Google Cloud console.
+- **My subscriptions** uses Google's client-side OAuth (implicit flow). It requests the
+  read-only `youtube.readonly` scope, holds the token in memory only (never
+  `localStorage`/cookies), and sends it directly from your browser to YouTube. It's
+  optional — the other sources work without ever signing in to Google.
 
 ## Contributing
 
