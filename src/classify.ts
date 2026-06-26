@@ -3,7 +3,10 @@
 // server in this app. This is the only design where "zero-knowledge on the
 // host's part" is literally true.
 
-import type { Classification, VideoItem } from "./taxonomy";
+import type { Classification, SubTagId, VideoItem } from "./taxonomy";
+import { SUBTAGS } from "./taxonomy";
+
+const VALID_CATEGORIES = ["wealth", "conflict", "entertainment", "fomo", "genuine"] as const;
 
 export type Provider = "openai" | "anthropic";
 
@@ -35,18 +38,46 @@ function parseResult(raw: string): Classification {
   // strip code fences if a model adds them
   const fence = txt.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (fence) txt = fence[1].trim();
-  const obj = JSON.parse(txt);
-  const validCats = ["wealth", "conflict", "entertainment", "fomo", "genuine"];
-  const category = validCats.includes(obj.category) ? obj.category : "entertainment";
-  const subtags = Array.isArray(obj.subtags) ? obj.subtags.slice(0, 6) : [];
-  let score = Number(obj.bait_score);
+
+  // Guarded parse: malformed / truncated model output must not error the whole
+  // video — fall back to a low-confidence, honest "couldn't classify" result.
+  let obj: any;
+  try {
+    obj = JSON.parse(txt);
+  } catch {
+    return {
+      category: "entertainment",
+      subtags: [],
+      bait_score: 0,
+      rationale: "Model returned unparseable output; not classified.",
+    };
+  }
+
+  const category = (VALID_CATEGORIES as readonly string[]).includes(obj?.category)
+    ? (obj.category as Classification["category"])
+    : "entertainment";
+
+  // Validate subtags against the known set, drop unknowns, and de-duplicate so
+  // downstream counting and React keys stay sound.
+  const rawTags: unknown[] = Array.isArray(obj?.subtags) ? obj.subtags : [];
+  const subtags = Array.from(
+    new Set(
+      rawTags.filter(
+        (t): t is SubTagId =>
+          typeof t === "string" && Object.prototype.hasOwnProperty.call(SUBTAGS, t)
+      )
+    )
+  ).slice(0, 6);
+
+  let score = Number(obj?.bait_score);
   if (!Number.isFinite(score)) score = 0;
   score = Math.max(0, Math.min(100, Math.round(score)));
+
   return {
     category,
     subtags,
     bait_score: score,
-    rationale: String(obj.rationale || "").slice(0, 240),
+    rationale: String(obj?.rationale || "").slice(0, 240),
   };
 }
 
@@ -84,7 +115,7 @@ async function callAnthropic(key: string, model: string, title: string, channel:
     },
     body: JSON.stringify({
       model,
-      max_tokens: 300,
+      max_tokens: 512,
       temperature: 0,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: buildUserPrompt(title, channel) }],
@@ -143,7 +174,7 @@ export async function classifyFeed(
 
 // A cheap, non-AI key sanity check (no network) before we let the user run.
 export async function validateKey(provider: Provider, key: string): Promise<{ ok: boolean; msg: string }> {
-  if (!key || key.length < 12) return { ok: false, msg: "That key looks too short." };
+  if (!key || key.length < 9) return { ok: false, msg: "That key looks too short." };
   if (provider === "openai" && !key.startsWith("sk-")) return { ok: false, msg: "OpenAI keys start with 'sk-'." };
   if (provider === "anthropic" && !key.startsWith("sk-ant-"))
     return { ok: false, msg: "Anthropic keys start with 'sk-ant-'." };

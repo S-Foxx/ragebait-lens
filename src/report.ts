@@ -14,6 +14,23 @@ export interface Report {
   engineeredPct: number;
 }
 
+// Round a set of counts to integer percentages that sum to exactly `total`'s 100%.
+function largestRemainder(counts: number[], total: number): number[] {
+  if (!total) return counts.map(() => 0);
+  const raw = counts.map((c) => (c / total) * 100);
+  const floors = raw.map((r) => Math.floor(r));
+  let remainder = 100 - floors.reduce((a, b) => a + b, 0);
+  // distribute the leftover to the largest fractional parts
+  const order = raw
+    .map((r, i) => ({ i, frac: r - Math.floor(r) }))
+    .sort((a, b) => b.frac - a.frac);
+  const result = [...floors];
+  for (let k = 0; k < order.length && remainder > 0; k++, remainder--) {
+    result[order[k].i]++;
+  }
+  return result;
+}
+
 export function buildReport(videos: VideoItem[]): Report {
   const categoryCounts = Object.fromEntries(CATEGORY_ORDER.map((c) => [c, 0])) as Record<CategoryId, number>;
   const subtagCounts = Object.fromEntries(SUBTAG_ORDER.map((s) => [s, 0])) as Record<SubTagId, number>;
@@ -28,19 +45,26 @@ export function buildReport(videos: VideoItem[]): Report {
     if (!c) continue;
     classified++;
     categoryCounts[c.category]++;
-    for (const t of c.subtags) if (t in subtagCounts) subtagCounts[t]++;
+    for (const t of c.subtags)
+      if (Object.prototype.hasOwnProperty.call(subtagCounts, t)) subtagCounts[t]++;
     baitSum += c.bait_score;
     if (c.bait_score <= 33) buckets["Low (0-33)"]++;
     else if (c.bait_score <= 66) buckets["Mid (34-66)"]++;
     else buckets["High (67-100)"]++;
   }
 
-  const categoryPct = Object.fromEntries(
-    CATEGORY_ORDER.map((c) => [c, classified ? Math.round((categoryCounts[c] / classified) * 100) : 0])
-  ) as Record<CategoryId, number>;
+  // Largest-remainder rounding so the category percentages sum to exactly 100
+  // (independent Math.round can drift to 99 or 101 and make the bar/legend lie).
+  const categoryPct = largestRemainder(
+    CATEGORY_ORDER.map((c) => categoryCounts[c]),
+    classified
+  ).reduce((acc, pct, idx) => {
+    acc[CATEGORY_ORDER[idx]] = pct;
+    return acc;
+  }, {} as Record<CategoryId, number>);
 
-  const engineered = classified ? classified - categoryCounts.genuine : 0;
-  const engineeredPct = classified ? Math.round((engineered / classified) * 100) : 0;
+  // Derive engineered as the complement of genuine so headline + genuine = 100.
+  const engineeredPct = classified ? 100 - categoryPct.genuine : 0;
 
   return {
     total: videos.length,

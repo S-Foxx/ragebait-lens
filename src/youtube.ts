@@ -16,7 +16,7 @@ export async function fetchTrending(apiKey: string, region: string, max: number)
     throw new Error(`YouTube ${res.status}: ${t.slice(0, 160)}`);
   }
   const data = await res.json();
-  return (data.items || []).map((it: any): VideoItem => {
+  return (data.items || []).filter((it: any) => it && it.id).map((it: any): VideoItem => {
     const s = it.snippet || {};
     const thumbs = s.thumbnails || {};
     const thumb = thumbs.medium?.url || thumbs.high?.url || thumbs.default?.url || "";
@@ -35,7 +35,12 @@ export async function fetchTrending(apiKey: string, region: string, max: number)
 
 function formatViews(n: number): string {
   if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, "") + "M views";
-  if (n >= 1e3) return (n / 1e3).toFixed(0) + "K views";
+  // round to K first so 999,999 rolls up to "1M" rather than "1000K"
+  if (n >= 1e3) {
+    const k = Math.round(n / 1e3);
+    if (k >= 1000) return (k / 1e3).toFixed(1).replace(/\.0$/, "") + "M views";
+    return k + "K views";
+  }
   return n + " views";
 }
 

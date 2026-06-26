@@ -1,3 +1,4 @@
+import type React from "react";
 import { useState } from "react";
 import type { Provider } from "../classify";
 import { DEFAULT_MODELS, validateKey } from "../classify";
@@ -19,14 +20,16 @@ export function SetupPanel({
   running,
 }: {
   state: SetupState;
-  setState: (s: SetupState) => void;
+  setState: React.Dispatch<React.SetStateAction<SetupState>>;
   onRun: () => void;
   running: boolean;
 }) {
   const [keyMsg, setKeyMsg] = useState<{ ok: boolean; msg: string } | null>(null);
 
+  // Functional updater: composes correctly even when several upd() calls fire
+  // in one event handler (avoids stale-closure clobbering during batched setState).
   function upd<K extends keyof SetupState>(k: K, val: SetupState[K]) {
-    setState({ ...state, [k]: val });
+    setState((prev) => ({ ...prev, [k]: val }));
   }
 
   async function checkKey() {
@@ -52,8 +55,8 @@ export function SetupPanel({
             <button
               key={p}
               onClick={() => {
-                upd("provider", p);
-                upd("model", DEFAULT_MODELS[p]);
+                // single atomic update so provider AND model change together
+                setState((prev) => ({ ...prev, provider: p, model: DEFAULT_MODELS[p] }));
                 setKeyMsg(null);
               }}
               className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${

@@ -28,13 +28,19 @@ export default function App() {
   const [fatal, setFatal] = useState<string | null>(null);
 
   const report = useMemo(() => buildReport(videos), [videos]);
-  const hasResults = videos.some((v) => v.classification);
+  // Show results/report once we have a feed AND at least one attempt resolved
+  // (a classification OR an error). This way an all-errored run still surfaces
+  // the report panel with its error count instead of silently hiding it.
+  const hasResults = videos.length > 0 && videos.some((v) => v.classification || v.error);
 
   async function run() {
     setFatal(null);
     setRunning(true);
     setDone(0);
     setFilter(null);
+    // clear any prior run's cards up front, so a failed fetch doesn't leave
+    // stale results next to the new error banner
+    setVideos([]);
     try {
       const feed = setup.useMock
         ? mockFeed(setup.count)
@@ -46,8 +52,18 @@ export default function App() {
       await classifyFeed(setup.provider, setup.aiKey, setup.model, feed, 4, () => {
         completed++;
         setDone(completed);
-        setVideos([...feed.map((v) => ({ ...v }))]);
+        setVideos(feed.map((v) => ({ ...v })));
       });
+
+      // If every video failed, surface a single clear explanation at the top.
+      const errs = feed.filter((v) => v.error).length;
+      if (errs > 0 && errs === feed.length) {
+        setFatal(
+          `All ${errs} classifications failed — your ${
+            setup.provider === "openai" ? "OpenAI" : "Anthropic"
+          } key may be invalid, out of quota, or rate-limited. See a card below for the exact error.`
+        );
+      }
     } catch (e: any) {
       setFatal(e?.message || "Something went wrong.");
     } finally {
