@@ -472,6 +472,12 @@ function SourceInputs({
           you can verify every word of this.
         </div>
 
+        <div className="rounded-md border border-ent/30 bg-ent/10 p-2.5 text-[11px] leading-relaxed text-zinc-300">
+          New to Google Cloud? The full step-by-step walkthrough is on the{" "}
+          <span className="font-semibold text-zinc-100">Setup guide</span> page (link in the header) — it covers every
+          screen with screenshots-level detail.
+        </div>
+
         <SubscriptionsHelp />
       </div>
     );

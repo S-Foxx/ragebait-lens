@@ -83,6 +83,12 @@ Get a free [YouTube Data API v3 key](https://console.cloud.google.com/apis/libra
    `localhost/*`), and API restrictions → YouTube Data API v3 only. This protects your
    free daily quota if the key ever leaks.
 
+> **First time with Google Cloud Console?** The app ships with a full, friendly,
+> screen-by-screen **Setup guide** page (link in the header) that walks a complete novice
+> through every step below — enabling the API, creating and restricting the key, creating
+> the OAuth client, Branding, Audience/test users — plus why the "unverified app" warning
+> is normal and a good-faith liability disclaimer.
+
 ### Google sign-in (My subscriptions)
 
 Reading your subscriptions needs a read-only OAuth grant instead of an API key. One-time setup:
@@ -97,6 +103,14 @@ Reading your subscriptions needs a read-only OAuth grant instead of an API key. 
    Google**. The scope requested is `youtube.readonly`. The access token lives in memory
    for that tab only, is never stored, and you can revoke it anytime at
    [myaccount.google.com/permissions](https://myaccount.google.com/permissions).
+
+## Share the verdict (not your feed)
+
+After analyzing, a **Share the verdict** panel renders the aggregate result to a PNG you
+can **download or copy to the clipboard**. The image contains numbers only — percentages,
+average bait score, top tactics — and deliberately includes **no video titles or channels**.
+Your personal feed stays private; the shareable artifact is just the data. Implemented
+client-side with `<canvas>` in `src/verdictImage.ts`.
 
 ## Deploy
 

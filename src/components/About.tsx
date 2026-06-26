@@ -127,6 +127,50 @@ export function About({ onBack }: { onBack: () => void }) {
             your chosen AI model to classify each one. It scores how engineered each title is and shows you the
             breakdown. No video is ever watched or downloaded; only the title text is read.
           </p>
+          <p className="mt-3">
+            The subscriptions mode needs a one-time Google sign-in setup. If the console feels intimidating, the{" "}
+            <span className="text-zinc-100">Setup guide</span> (link in the header) walks you through every screen in
+            plain language. And once you have a result, you can share the{" "}
+            <span className="text-zinc-100">verdict</span> as an image — numbers only, never your actual feed, since
+            what gets served to you is nobody else's business.
+          </p>
+        </section>
+
+        <section className="border-t border-edge pt-8">
+          <h2 className="mb-2 text-lg font-bold text-zinc-100">Part of a bigger conversation: Our Plain Sight</h2>
+          <p>
+            I write a newsletter called <span className="text-zinc-100">Our Plain Sight</span> about the quiet machinery
+            behind disconnection — how attention gets engineered, how outrage gets manufactured, how the gap between
+            “us” and “them” widens by design — and the small, human countermeasures that put choice back where it belongs:
+            with us. Ragebait Lens is one of those countermeasures, made into something you can actually hold.
+          </p>
+          <p className="mt-3">
+            The whole practice comes down to one word — <span className="text-zinc-100">why?</span> Why does this content
+            exist? Why am I the target for it? Who benefits from my reaction? It’s a pause, not a cure. This tool just
+            makes that pause a little easier to take.
+          </p>
+          <p className="mt-3">
+            If that resonates, come join the discussion — everyone’s welcome, whatever you believe or wherever you come
+            from. You can read it at{" "}
+            <a
+              href="https://ourplainsight.substack.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-ent underline decoration-edge underline-offset-2 hover:text-zinc-100"
+            >
+              ourplainsight.substack.com
+            </a>{" "}
+            or follow along at{" "}
+            <a
+              href="https://substack.com/@ourplainsight"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-ent underline decoration-edge underline-offset-2 hover:text-zinc-100"
+            >
+              @ourplainsight
+            </a>
+            . Reply to anything I send — I read all of it.
+          </p>
         </section>
 
         <p className="border-t border-edge pt-6 text-[12px] text-muted">

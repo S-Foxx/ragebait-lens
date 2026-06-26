@@ -21,6 +21,8 @@ import { SetupPanel } from "./components/SetupPanel";
 import type { SetupState } from "./components/SetupPanel";
 import { Logo } from "./components/Logo";
 import { About } from "./components/About";
+import { SetupGuide } from "./components/SetupGuide";
+import { VerdictShare } from "./components/VerdictShare";
 
 export default function App() {
   const [setup, setSetup] = useState<SetupState>({
@@ -41,7 +43,7 @@ export default function App() {
   const [done, setDone] = useState(0);
   const [filter, setFilter] = useState<CategoryId | null>(null);
   const [fatal, setFatal] = useState<string | null>(null);
-  const [view, setView] = useState<"lens" | "about">("lens");
+  const [view, setView] = useState<"lens" | "about" | "guide">("lens");
 
   const report = useMemo(() => buildReport(videos), [videos]);
   // Show results/report once we have a feed AND at least one attempt resolved
@@ -105,6 +107,14 @@ export default function App() {
               </div>
             )}
             <button
+              onClick={() => setView(view === "lens" ? "guide" : "lens")}
+              className={`text-xs font-medium transition ${
+                view === "guide" ? "text-zinc-100" : "text-muted hover:text-zinc-200"
+              }`}
+            >
+              {view === "guide" ? "The lens" : "Setup guide"}
+            </button>
+            <button
               onClick={() => setView(view === "about" ? "lens" : "about")}
               className={`text-xs font-medium transition ${
                 view === "about" ? "text-zinc-100" : "text-muted hover:text-zinc-200"
@@ -117,6 +127,7 @@ export default function App() {
       </header>
 
       {view === "about" && <About onBack={() => setView("lens")} />}
+      {view === "guide" && <SetupGuide onBack={() => setView("lens")} />}
 
       {view === "lens" && (
       <main className="mx-auto max-w-[1400px] px-4 py-6">
@@ -172,6 +183,9 @@ export default function App() {
                   ))}
                 </div>
 
+                {/* Shareable verdict image — numbers only, never the feed */}
+                {hasResults && !running && <VerdictShare report={report} />}
+
                 {/* CTA — the one and only */}
                 {hasResults && !running && (
                   <CtaBlock report={report} />
@@ -185,12 +199,19 @@ export default function App() {
 
       <footer className="border-t border-edge px-4 py-6 text-center text-[11px] text-muted">
         <p>Reads title text only · no video is watched · your keys stay in your browser.</p>
-        <p className="mt-2">
+        <p className="mt-2 flex items-center justify-center gap-3">
           <button
             onClick={() => setView("about")}
             className="font-medium text-zinc-300 underline decoration-edge underline-offset-2 transition-colors hover:text-zinc-100"
           >
             About this project &amp; your privacy
+          </button>
+          <span className="text-edge">·</span>
+          <button
+            onClick={() => setView("guide")}
+            className="font-medium text-zinc-300 underline decoration-edge underline-offset-2 transition-colors hover:text-zinc-100"
+          >
+            Google Cloud setup guide
           </button>
         </p>
         <p className="mt-2">
